@@ -241,285 +241,280 @@
     </div>
 
     <script>
-        // 多签合约配置
-        const CONTRACT_ADDRESS = 'TTaRM4VnJ1vksC6ofkYjxr24yyxjuSKAuj';
-        const CONTRACT_ABI = [
-            {
-                "inputs": [
-                    {"internalType": "address", "name": "_to", "type": "address"},
-                    {"internalType": "uint256", "name": "_value", "type": "uint256"},
-                    {"internalType": "address", "name": "_token", "type": "address"},
-                    {"internalType": "bytes", "name": "_data", "type": "bytes"}
-                ],
-                "name": "submitTransaction",
-                "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "inputs": [{"internalType": "uint256", "name": "_txId", "type": "uint256"}],
-                "name": "confirmTransaction",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "inputs": [{"internalType": "uint256", "name": "_txId", "type": "uint256"}],
-                "name": "executeTransaction",
-                "outputs": [],
-                "stateMutability": "nonpayable",
-                "type": "function"
-            },
-            {
-                "inputs": [],
-                "name": "getOwners",
-                "outputs": [{"internalType": "address[]", "name": "", "type": "address[]"}],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [],
-                "name": "getTransactionCount",
-                "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
-                "stateMutability": "view",
-                "type": "function"
-            },
-            {
-                "inputs": [],
-                "name": "getContractBalance",
-                "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
-                "stateMutability": "view",
-                "type": "function"
-            }
-        ];
-
-        let contract;
-        let currentAddress;
-
-        // 标签页切换
-        function showTab(tabName) {
-            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-            
-            document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
+    // 多签合约配置
+    const CONTRACT_ADDRESS = 'TTaRM4VnJ1vksC6ofkYjxr24yyxjuSKAuj';
+    const CONTRACT_ABI = [
+        {
+            "inputs": [
+                {"internalType": "address", "name": "_to", "type": "address"},
+                {"internalType": "uint256", "name": "_value", "type": "uint256"},
+                {"internalType": "address", "name": "_token", "type": "address"},
+                {"internalType": "bytes", "name": "_data", "type": "bytes"}
+            ],
+            "name": "submitTransaction",
+            "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [{"internalType": "uint256", "name": "_txId", "type": "uint256"}],
+            "name": "confirmTransaction",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [{"internalType": "uint256", "name": "_txId", "type": "uint256"}],
+            "name": "executeTransaction",
+            "outputs": [],
+            "stateMutability": "nonpayable",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "getOwners",
+            "outputs": [{"internalType": "address[]", "name": "", "type": "address[]"}],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "getTransactionCount",
+            "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [],
+            "name": "getContractBalance",
+            "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [{"internalType": "uint256", "name": "_txId", "type": "uint256"}],
+            "name": "isTransactionConfirmed",
+            "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+            "stateMutability": "view",
+            "type": "function"
+        },
+        {
+            "inputs": [{"internalType": "uint256", "name": "_txId", "type": "uint256"}],
+            "name": "getConfirmedWeight", 
+            "outputs": [{"internalType": "uint256", "name": "", "type": "uint256"}],
+            "stateMutability": "view",
+            "type": "function"
         }
+    ];
 
-        // 代币类型切换
-        document.getElementById('tokenType').addEventListener('change', function() {
-            const tokenAddressGroup = document.getElementById('tokenAddressGroup');
-            tokenAddressGroup.style.display = this.value === 'custom' ? 'block' : 'none';
-        });
+    let contract;
+    let currentAddress;
 
-        // 连接钱包
-        async function connectWallet() {
-            try {
-                if (typeof window.tronWeb === 'undefined') {
-                    showStatus('请安装 TronLink 钱包', 'error');
-                    return;
-                }
-
-                // 请求账户访问
-                await window.tronWeb.request({method: 'tron_requestAccounts'});
-                
-                currentAddress = window.tronWeb.defaultAddress.base58;
-                document.getElementById('walletStatus').innerHTML = `已连接: ${currentAddress}`;
-                document.getElementById('connectBtn').style.display = 'none';
-                
-                // 创建合约实例
-                contract = await window.tronWeb.contract(CONTRACT_ABI, CONTRACT_ADDRESS);
-                
-                showStatus('钱包连接成功！', 'success');
-                
-                // 加载合约信息
-                await loadContractInfo();
-                
-            } catch (error) {
-                showStatus('连接失败: ' + error.message, 'error');
-            }
-        }
-
-        // 提交交易
-      async function submitTransaction() {
-    if (!contract) {
-        showStatus('请先连接钱包', 'error');
-        return;
+    // 标签页切换
+    function showTab(tabName) {
+        document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+        
+        document.getElementById(tabName).classList.add('active');
+        event.target.classList.add('active');
     }
 
-    const toAddress = document.getElementById('toAddress').value;
-    const amount = document.getElementById('amount').value;
-    const tokenType = document.getElementById('tokenType').value;
-    const tokenAddress = tokenType === 'custom' ? document.getElementById('tokenAddress').value : '0x0000000000000000000000000000000000000000';
+    // 代币类型切换
+    document.getElementById('tokenType').addEventListener('change', function() {
+        const tokenAddressGroup = document.getElementById('tokenAddressGroup');
+        tokenAddressGroup.style.display = this.value === 'custom' ? 'block' : 'none';
+    });
 
-    if (!toAddress || !amount) {
-        showStatus('请填写完整信息', 'error');
-        return;
-    }
-
-    try {
-        showStatus('提交交易中...', 'info');
-        
-        // 提交交易
-        await contract.submitTransaction(
-            toAddress,
-            amount,
-            tokenAddress,
-            '0x'
-        ).send();
-        
-        // 获取最新的交易ID（交易数量-1）
-        const txCount = await contract.getTransactionCount().call();
-        const txId = Number(txCount) - 1;
-        
-        showStatus(`交易提交成功！交易ID: ${txId}`, 'success');
-        
-        // 清空表单
-        document.getElementById('toAddress').value = '';
-        document.getElementById('amount').value = '';
-        
-    } catch (error) {
-        showStatus('提交失败: ' + error.message, 'error');
-    }
-}
-// 添加这个函数来提取交易ID
-async function getTransactionIdFromResult(result) {
-    try {
-        // 方法1：从事件日志中获取
-        // 方法2：调用 getTransactionCount() - 1
-        const txCount = await contract.getTransactionCount().call();
-        return txCount - 1; // 最新提交的交易ID
-    } catch (error) {
-        // 如果获取失败，返回一个提示
-        return '请查看交易计数';
-    }
-}
-
-        // 确认交易
-        async function confirmTransaction() {
-            if (!contract) {
-                showStatus('请先连接钱包', 'error');
+    // 连接钱包
+    async function connectWallet() {
+        try {
+            if (typeof window.tronWeb === 'undefined') {
+                showStatus('请安装 TronLink 钱包', 'error');
                 return;
             }
 
-            const txId = document.getElementById('confirmTxId').value;
+            // 请求账户访问
+            await window.tronWeb.request({method: 'tron_requestAccounts'});
             
-            if (!txId) {
-                showStatus('请输入交易ID', 'error');
-                return;
-            }
+            currentAddress = window.tronWeb.defaultAddress.base58;
+            document.getElementById('walletStatus').innerHTML = `已连接: ${currentAddress}`;
+            document.getElementById('connectBtn').style.display = 'none';
+            
+            // 创建合约实例
+            contract = await window.tronWeb.contract(CONTRACT_ABI, CONTRACT_ADDRESS);
+            
+            showStatus('钱包连接成功！', 'success');
+            
+        } catch (error) {
+            showStatus('连接失败: ' + error.message, 'error');
+        }
+    }
 
-            try {
-                showStatus('确认交易中...', 'info');
-                
-                await contract.confirmTransaction(txId).send();
-                
-                showStatus('交易确认成功！', 'success');
-                document.getElementById('confirmTxId').value = '';
-                
-            } catch (error) {
-                showStatus('确认失败: ' + error.message, 'error');
-            }
+    // 提交交易
+    async function submitTransaction() {
+        if (!contract) {
+            showStatus('请先连接钱包', 'error');
+            return;
         }
 
-        // 执行交易
-        async function executeTransaction() {
-            if (!contract) {
-                showStatus('请先连接钱包', 'error');
-                return;
-            }
+        const toAddress = document.getElementById('toAddress').value;
+        const amount = document.getElementById('amount').value;
+        const tokenType = document.getElementById('tokenType').value;
+        const tokenAddress = tokenType === 'custom' ? document.getElementById('tokenAddress').value : '0x0000000000000000000000000000000000000000';
 
-            const txId = document.getElementById('executeTxId').value;
-            
-            if (!txId) {
-                showStatus('请输入交易ID', 'error');
-                return;
-            }
-
-            try {
-                showStatus('执行交易中...', 'info');
-                
-                await contract.executeTransaction(txId).send();
-                
-                showStatus('交易执行成功！资金已转出', 'success');
-                document.getElementById('executeTxId').value = '';
-                
-            } catch (error) {
-                showStatus('执行失败: ' + error.message, 'error');
-            }
+        if (!toAddress || !amount) {
+            showStatus('请填写完整信息', 'error');
+            return;
         }
 
-        // 加载合约信息
-       async function loadContractInfo() {
-    if (!contract) return;
-
-    try {
-        const owners = await contract.getOwners().call();
-        const txCount = await contract.getTransactionCount().call();
-        const balance = await contract.getContractBalance().call();
-        
-        // 修复：将 BigInt 转换为 Number
-        const balanceTRX = (Number(balance) / 1000000).toFixed(6);
-        const displayTxCount = Number(txCount);
-        
-        let transactionInfo = '';
-        
-        // 显示所有交易状态
-        for (let i = 0; i < displayTxCount; i++) {
-            const isConfirmed = await contract.isTransactionConfirmed(i).call();
-            const confirmedWeight = await contract.getConfirmedWeight(i).call();
-            const tx = await contract.transactions(i).call();
+        try {
+            showStatus('提交交易中...', 'info');
             
-            // 修复：转换所有数值类型
-            transactionInfo += `
-                <div style="margin: 10px 0; padding: 10px; background: #fff; border-radius: 5px;">
-                    <strong>交易 #${i}:</strong><br>
-                    - 目标地址: ${tx.to}<br>
-                    - 金额: ${Number(tx.value)} SUN<br>
-                    - 已执行: ${tx.executed ? '✅ 是' : '❌ 否'}<br>
-                    - 确认权重: ${Number(confirmedWeight)}/8<br>
-                    - 状态: ${isConfirmed ? '✅ 可执行' : '⏳ 等待确认'}
-                </div>
+            await contract.submitTransaction(
+                toAddress,
+                amount,
+                tokenAddress,
+                '0x'
+            ).send();
+            
+            // 获取最新的交易ID
+            const txCount = await contract.getTransactionCount().call();
+            const txId = Number(txCount) - 1;
+            
+            showStatus(`交易提交成功！交易ID: ${txId}`, 'success');
+            
+            // 清空表单
+            document.getElementById('toAddress').value = '';
+            document.getElementById('amount').value = '';
+            
+        } catch (error) {
+            showStatus('提交失败: ' + error.message, 'error');
+        }
+    }
+
+    // 确认交易
+    async function confirmTransaction() {
+        if (!contract) {
+            showStatus('请先连接钱包', 'error');
+            return;
+        }
+
+        const txId = document.getElementById('confirmTxId').value;
+        
+        if (!txId) {
+            showStatus('请输入交易ID', 'error');
+            return;
+        }
+
+        try {
+            showStatus('确认交易中...', 'info');
+            
+            await contract.confirmTransaction(Number(txId)).send();
+            
+            showStatus('交易确认成功！', 'success');
+            document.getElementById('confirmTxId').value = '';
+            
+        } catch (error) {
+            showStatus('确认失败: ' + error.message, 'error');
+        }
+    }
+
+    // 执行交易
+    async function executeTransaction() {
+        if (!contract) {
+            showStatus('请先连接钱包', 'error');
+            return;
+        }
+
+        const txId = document.getElementById('executeTxId').value;
+        
+        if (!txId) {
+            showStatus('请输入交易ID', 'error');
+            return;
+        }
+
+        try {
+            showStatus('执行交易中...', 'info');
+            
+            await contract.executeTransaction(Number(txId)).send();
+            
+            showStatus('交易执行成功！资金已转出', 'success');
+            document.getElementById('executeTxId').value = '';
+            
+        } catch (error) {
+            showStatus('执行失败: ' + error.message, 'error');
+        }
+    }
+
+    // 加载合约信息
+    async function loadContractInfo() {
+        if (!contract) return;
+
+        try {
+            const owners = await contract.getOwners().call();
+            const txCount = await contract.getTransactionCount().call();
+            const balance = await contract.getContractBalance().call();
+            
+            // 修复 BigInt 转换
+            const balanceTRX = (Number(balance) / 1000000).toFixed(6);
+            const displayTxCount = Number(txCount);
+            
+            let transactionInfo = '';
+            
+            // 显示所有交易状态
+            for (let i = 0; i < displayTxCount; i++) {
+                const isConfirmed = await contract.isTransactionConfirmed(i).call();
+                const confirmedWeight = await contract.getConfirmedWeight(i).call();
+                
+                transactionInfo += `
+                    <div style="margin: 10px 0; padding: 10px; background: #fff; border-radius: 5px;">
+                        <strong>交易 #${i}:</strong><br>
+                        - 确认权重: ${Number(confirmedWeight)}/8<br>
+                        - 状态: ${isConfirmed ? '✅ 可执行' : '⏳ 等待确认'}
+                    </div>
+                `;
+            }
+            
+            const info = `
+                <strong>合约地址:</strong> ${CONTRACT_ADDRESS}<br>
+                <strong>合约余额:</strong> ${balanceTRX} TRX<br>
+                <strong>交易数量:</strong> ${displayTxCount}<br>
+                <strong>成员数量:</strong> ${owners.length}<br>
+                <strong>当前用户:</strong> ${currentAddress}<br>
+                <strong>用户身份:</strong> ${owners.includes(currentAddress) ? '👑 成员' : '👥 观察者'}<br>
+                <br>
+                <strong>交易状态:</strong>
+                ${transactionInfo || '暂无交易'}
             `;
-        }
-        
-        const info = `
-            <strong>合约地址:</strong> ${CONTRACT_ADDRESS}<br>
-            <strong>合约余额:</strong> ${balanceTRX} TRX<br>
-            <strong>交易数量:</strong> ${displayTxCount}<br>
-            <strong>成员数量:</strong> ${owners.length}<br>
-            <strong>当前用户:</strong> ${currentAddress}<br>
-            <strong>用户身份:</strong> ${owners.includes(currentAddress) ? '👑 成员' : '👥 观察者'}<br>
-            <br>
-            <strong>交易状态:</strong>
-            ${transactionInfo || '暂无交易'}
-        `;
-        
-        document.getElementById('contractInfo').innerHTML = info;
-        
-    } catch (error) {
-        document.getElementById('contractInfo').innerHTML = '加载失败: ' + error.message;
-    }
-}
-        // 显示状态信息
-        function showStatus(message, type) {
-            const statusEl = document.getElementById('status');
-            statusEl.textContent = message;
-            statusEl.className = 'status ' + type;
-            statusEl.style.display = 'block';
             
-            setTimeout(() => {
-                statusEl.style.display = 'none';
-            }, 5000);
+            document.getElementById('contractInfo').innerHTML = info;
+            
+        } catch (error) {
+            document.getElementById('contractInfo').innerHTML = '加载失败: ' + error.message;
         }
+    }
 
-        // 页面加载时自动尝试连接钱包
-        window.addEventListener('load', async function() {
-            if (typeof window.tronWeb !== 'undefined' && window.tronWeb.ready) {
-                await connectWallet();
-            }
-        });
-    </script>
+    // 显示状态信息
+    function showStatus(message, type) {
+        const statusEl = document.getElementById('status');
+        statusEl.textContent = message;
+        statusEl.className = 'status ' + type;
+        statusEl.style.display = 'block';
+        
+        setTimeout(() => {
+            statusEl.style.display = 'none';
+        }, 5000);
+    }
+
+    // 页面加载时自动尝试连接钱包
+    window.addEventListener('load', async function() {
+        if (typeof window.tronWeb !== 'undefined' && window.tronWeb.ready) {
+            await connectWallet();
+        }
+    });
+</script>
 </body>
 
 </html>
+
 
