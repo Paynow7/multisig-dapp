@@ -340,42 +340,59 @@
         }
 
         // 提交交易
-        async function submitTransaction() {
-            if (!contract) {
-                showStatus('请先连接钱包', 'error');
-                return;
-            }
+       async function submitTransaction() {
+    if (!contract) {
+        showStatus('请先连接钱包', 'error');
+        return;
+    }
 
-            const toAddress = document.getElementById('toAddress').value;
-            const amount = document.getElementById('amount').value;
-            const tokenType = document.getElementById('tokenType').value;
-            const tokenAddress = tokenType === 'custom' ? document.getElementById('tokenAddress').value : '0x0000000000000000000000000000000000000000';
+    const toAddress = document.getElementById('toAddress').value;
+    const amount = document.getElementById('amount').value;
+    const tokenType = document.getElementById('tokenType').value;
+    const tokenAddress = tokenType === 'custom' ? document.getElementById('tokenAddress').value : '0x0000000000000000000000000000000000000000';
 
-            if (!toAddress || !amount) {
-                showStatus('请填写完整信息', 'error');
-                return;
-            }
+    if (!toAddress || !amount) {
+        showStatus('请填写完整信息', 'error');
+        return;
+    }
 
-            try {
-                showStatus('提交交易中...', 'info');
-                
-                const result = await contract.submitTransaction(
-                    toAddress,
-                    amount,
-                    tokenAddress,
-                    '0x'
-                ).send();
-                
-                showStatus(`交易提交成功！交易ID: ${result}`, 'success');
-                
-                // 清空表单
-                document.getElementById('toAddress').value = '';
-                document.getElementById('amount').value = '';
-                
-            } catch (error) {
-                showStatus('提交失败: ' + error.message, 'error');
-            }
-        }
+    try {
+        showStatus('提交交易中...', 'info');
+        
+        // 修改这里：正确处理返回值
+        const result = await contract.submitTransaction(
+            toAddress,
+            amount,
+            tokenAddress,
+            '0x'
+        ).send();
+        
+        // 合约应该返回数字交易ID，但可能需要从事件或交易结果中提取
+        const txId = await getTransactionIdFromResult(result);
+        
+        showStatus(`交易提交成功！交易ID: ${txId}`, 'success');
+        
+        // 清空表单
+        document.getElementById('toAddress').value = '';
+        document.getElementById('amount').value = '';
+        
+    } catch (error) {
+        showStatus('提交失败: ' + error.message, 'error');
+    }
+}
+
+// 添加这个函数来提取交易ID
+async function getTransactionIdFromResult(result) {
+    try {
+        // 方法1：从事件日志中获取
+        // 方法2：调用 getTransactionCount() - 1
+        const txCount = await contract.getTransactionCount().call();
+        return txCount - 1; // 最新提交的交易ID
+    } catch (error) {
+        // 如果获取失败，返回一个提示
+        return '请查看交易计数';
+    }
+}
 
         // 确认交易
         async function confirmTransaction() {
@@ -478,4 +495,5 @@
         });
     </script>
 </body>
+
 </html>
