@@ -340,7 +340,7 @@
         }
 
         // 提交交易
-       async function submitTransaction() {
+      async function submitTransaction() {
     if (!contract) {
         showStatus('请先连接钱包', 'error');
         return;
@@ -359,16 +359,17 @@
     try {
         showStatus('提交交易中...', 'info');
         
-        // 修改这里：正确处理返回值
-        const result = await contract.submitTransaction(
+        // 提交交易
+        await contract.submitTransaction(
             toAddress,
             amount,
             tokenAddress,
             '0x'
         ).send();
         
-        // 合约应该返回数字交易ID，但可能需要从事件或交易结果中提取
-        const txId = await getTransactionIdFromResult(result);
+        // 获取最新的交易ID（交易数量-1）
+        const txCount = await contract.getTransactionCount().call();
+        const txId = Number(txCount) - 1;
         
         showStatus(`交易提交成功！交易ID: ${txId}`, 'success');
         
@@ -380,7 +381,6 @@
         showStatus('提交失败: ' + error.message, 'error');
     }
 }
-
 // 添加这个函数来提取交易ID
 async function getTransactionIdFromResult(result) {
     try {
@@ -449,32 +449,57 @@ async function getTransactionIdFromResult(result) {
         }
 
         // 加载合约信息
-        async function loadContractInfo() {
-            if (!contract) return;
+       async function loadContractInfo() {
+    if (!contract) return;
 
-            try {
-                const owners = await contract.getOwners().call();
-                const txCount = await contract.getTransactionCount().call();
-                const balance = await contract.getContractBalance().call();
-                
-                const balanceTRX = (balance / 1000000).toFixed(6);
-                
-                const info = `
-                    <strong>合约地址:</strong> ${CONTRACT_ADDRESS}<br>
-                    <strong>合约余额:</strong> ${balanceTRX} TRX<br>
-                    <strong>交易数量:</strong> ${txCount}<br>
-                    <strong>成员数量:</strong> ${owners.length}<br>
-                    <strong>当前用户:</strong> ${currentAddress}<br>
-                    <strong>用户身份:</strong> ${owners.includes(currentAddress) ? '👑 成员' : '👥 观察者'}
-                `;
-                
-                document.getElementById('contractInfo').innerHTML = info;
-                
-            } catch (error) {
-                document.getElementById('contractInfo').innerHTML = '加载失败: ' + error.message;
-            }
+    try {
+        const owners = await contract.getOwners().call();
+        const txCount = await contract.getTransactionCount().call();
+        const balance = await contract.getContractBalance().call();
+        
+        // 修复：将 BigInt 转换为 Number
+        const balanceTRX = (Number(balance) / 1000000).toFixed(6);
+        const displayTxCount = Number(txCount);
+        
+        let transactionInfo = '';
+        
+        // 显示所有交易状态
+        for (let i = 0; i < displayTxCount; i++) {
+            const isConfirmed = await contract.isTransactionConfirmed(i).call();
+            const confirmedWeight = await contract.getConfirmedWeight(i).call();
+            const tx = await contract.transactions(i).call();
+            
+            // 修复：转换所有数值类型
+            transactionInfo += `
+                <div style="margin: 10px 0; padding: 10px; background: #fff; border-radius: 5px;">
+                    <strong>交易 #${i}:</strong><br>
+                    - 目标地址: ${tx.to}<br>
+                    - 金额: ${Number(tx.value)} SUN<br>
+                    - 已执行: ${tx.executed ? '✅ 是' : '❌ 否'}<br>
+                    - 确认权重: ${Number(confirmedWeight)}/8<br>
+                    - 状态: ${isConfirmed ? '✅ 可执行' : '⏳ 等待确认'}
+                </div>
+            `;
         }
-
+        
+        const info = `
+            <strong>合约地址:</strong> ${CONTRACT_ADDRESS}<br>
+            <strong>合约余额:</strong> ${balanceTRX} TRX<br>
+            <strong>交易数量:</strong> ${displayTxCount}<br>
+            <strong>成员数量:</strong> ${owners.length}<br>
+            <strong>当前用户:</strong> ${currentAddress}<br>
+            <strong>用户身份:</strong> ${owners.includes(currentAddress) ? '👑 成员' : '👥 观察者'}<br>
+            <br>
+            <strong>交易状态:</strong>
+            ${transactionInfo || '暂无交易'}
+        `;
+        
+        document.getElementById('contractInfo').innerHTML = info;
+        
+    } catch (error) {
+        document.getElementById('contractInfo').innerHTML = '加载失败: ' + error.message;
+    }
+}
         // 显示状态信息
         function showStatus(message, type) {
             const statusEl = document.getElementById('status');
@@ -497,3 +522,4 @@ async function getTransactionIdFromResult(result) {
 </body>
 
 </html>
+
