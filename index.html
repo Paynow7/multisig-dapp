@@ -310,6 +310,12 @@
     let contract;
     let currentAddress;
 
+    // USDT 地址配置
+const TOKEN_ADDRESSES = {
+    trx: '0x0000000000000000000000000000000000000000',
+    usdt: 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t' // Shasta测试网USDT
+};
+
     // 标签页切换
     function showTab(tabName) {
         document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
@@ -320,10 +326,12 @@
     }
 
     // 代币类型切换
-    document.getElementById('tokenType').addEventListener('change', function() {
-        const tokenAddressGroup = document.getElementById('tokenAddressGroup');
-        tokenAddressGroup.style.display = this.value === 'custom' ? 'block' : 'none';
-    });
+    // 代币类型切换
+document.getElementById('tokenType').addEventListener('change', function() {
+    const tokenType = this.value;
+    document.getElementById('tokenAddressGroup').style.display = tokenType === 'custom' ? 'block' : 'none';
+    document.getElementById('usdtAddressGroup').style.display = tokenType === 'usdt' ? 'block' : 'none';
+});
 
     // 连接钱包
     async function connectWallet() {
@@ -357,10 +365,19 @@
             return;
         }
 
-        const toAddress = document.getElementById('toAddress').value;
-        const amount = document.getElementById('amount').value;
-        const tokenType = document.getElementById('tokenType').value;
-        const tokenAddress = tokenType === 'custom' ? document.getElementById('tokenAddress').value : '0x0000000000000000000000000000000000000000';
+const toAddress = document.getElementById('toAddress').value;
+const amount = document.getElementById('amount').value;
+const tokenType = document.getElementById('tokenType').value;
+
+// 修改这里：处理USDT选择
+let tokenAddress;
+if (tokenType === 'usdt') {
+    tokenAddress = 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'; // Shasta测试网USDT地址
+} else if (tokenType === 'custom') {
+    tokenAddress = document.getElementById('tokenAddress').value;
+} else {
+    tokenAddress = '0x0000000000000000000000000000000000000000'; // TRX地址
+}
 
         if (!toAddress || !amount) {
             showStatus('请填写完整信息', 'error');
@@ -516,6 +533,7 @@
 </body>
 
 </html>
+
 
 
 
