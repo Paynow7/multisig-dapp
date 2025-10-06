@@ -190,19 +190,19 @@
                     <input type="number" id="amount" placeholder="1 TRX = 1,000,000 SUN">
                 </div>
                 <div class="input-group">
-                    <label>代币类型：</label>
-                    <select id="tokenType">
-                        <option value="trx">TRX</option>
-                        <option value="custom">TRC20 代币</option>
-                    </select>
-                </div>
-                <div class="input-group" id="tokenAddressGroup" style="display:none;">
-                    <label>代币合约地址：</label>
-                    <input type="text" id="tokenAddress" placeholder="输入TRC20合约地址">
-                </div>
-                <button onclick="submitTransaction()">提交交易</button>
-            </div>
-        </div>
+    <label>代币类型：</label>
+    <select id="tokenType">
+        <option value="trx">TRX</option>
+        <option value="usdt">USDT (TRC20)</option>
+        <option value="custom">其他TRC20代币</option>
+    </select>
+</div>
+
+<div class="input-group" id="usdtAddressGroup" style="display:none;">
+    <label>USDT 合约地址：</label>
+    <input type="text" id="usdtAddress" value="TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t" readonly>
+    <small>Shasta测试网USDT地址（主网不同）</small>
+</div>
 
         <!-- 确认交易标签页 -->
         <div id="confirm" class="tab">
@@ -516,5 +516,6 @@
 </body>
 
 </html>
+
 
 
